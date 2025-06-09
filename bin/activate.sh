@@ -202,8 +202,9 @@ if [[ -n "${DR_MINIO_COMPOSE_FILE}" ]]; then
   export MINIO_GID=$(id -g)
   export MINIO_GROUPNAME=$(id -g -n)
   if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]]; then
-
-    if [ "$DR_DOCKER_MAJOR_VERSION" -gt 24 ]; then
+    if [ "${DR_DOCKER_MAJOR_VERSION:-0}" -gt 24 ]; then
+      DETACH_FLAG="--detach=true"
+    else
       DETACH_FLAG="--detach=true"
     fi
 
@@ -231,8 +232,10 @@ fi
 DEPENDENCY_VERSION=$(jq -r '.master_version  | select (.!=null)' $DIR/defaults/dependencies.json)
 
 SIMAPP_VER=$(docker inspect ${DR_SIMAPP_SOURCE}:${DR_SIMAPP_VERSION} 2>/dev/null | jq -r .[].Config.Labels.version)
-if [ -z "$SIMAPP_VER" ]; then SIMAPP_VER=$SIMAPP_VERSION; fi
-if ! verlte $DEPENDENCY_VERSION $SIMAPP_VER; then
+if [ -z "$SIMAPP_VER" ] || [ "$SIMAPP_VER" == "null" ]; then 
+  SIMAPP_VER="${DR_SIMAPP_VERSION:-0.0.0}"
+fi
+if [ -n "$DEPENDENCY_VERSION" ] && [ -n "$SIMAPP_VER" ] && ! verlte "$DEPENDENCY_VERSION" "$SIMAPP_VER"; then
   echo "WARNING: Incompatible version of Deepracer Simapp. Expected >$DEPENDENCY_VERSION. Got $SIMAPP_VER."
 fi
 
